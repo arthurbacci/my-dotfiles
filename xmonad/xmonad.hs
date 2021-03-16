@@ -1,3 +1,5 @@
+-- ~/.xmonad/xmonad.hs
+
 ----------------------------------
 -- Arthur Bacci's XMonad Config --
 ----------------------------------
@@ -9,79 +11,92 @@
 -- Default
 import XMonad hiding ((|||))
 import Data.Monoid
+import Data.Tuple
 import System.Exit
 import XMonad.Util.Run
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
 -- Layouts
-import XMonad.Layout.ResizableTile        -- A alternative to Tall Layout
-import XMonad.Layout.BinarySpacePartition -- Each window divides in two
-import XMonad.Layout.Tabbed               -- Tabs on top
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.BinarySpacePartition
+import XMonad.Layout.Tabbed
+import XMonad.Layout.TwoPane
+import XMonad.Layout.Accordion
 -- Layout modifiers
 import XMonad.Layout.Spacing           -- Adds some space between the windows
 import XMonad.Layout.NoBorders         -- Removes the borders
-import XMonad.Layout.LayoutCombinators -- To combine the layouts and use JumpToLayout
-import XMonad.Layout.Renamed           -- Rename the layouts
--- XMobar
-import XMonad.Hooks.ManageDocks -- To the windows don't hide the bar
-import XMonad.Hooks.DynamicLog  -- To transfer data to XMobar
--- Run prompt
-import XMonad.Prompt
-import XMonad.Prompt.Shell
--- Change volume
-import XMonad.Actions.Volume -- To change the volume
-import XMonad.Util.Dzen      -- To show the volume
--- More
--- import XMonad.Hooks.InsertPosition -- New windows will appear bellow and not above
-                                   -- https://stackoverflow.com/questions/50666868/how-to-modify-order-of-tabbed-windows-in-xmonad?rq=1
+import XMonad.Layout.LayoutCombinators -- To use JumpToLayout |
+import XMonad.Layout.Renamed -- Rename the layouts |
+import XMonad.Hooks.ManageDocks -- Related to the bar |
+import XMonad.Hooks.DynamicLog  ----------------------'
+import XMonad.Actions.Volume -- Change Volume |
+import XMonad.Util.Dzen      -----------------'
+import XMonad.Actions.Minimize -- Minimize with Mod-N (Mod-Shift-N for undo) |
+import XMonad.Layout.Minimize  ----------------------------------------------'
+import XMonad.Actions.GridSelect -- Grid menu |
+import XMonad.Layout.ThreeColumns -- Three Colums Layout |
+import XMonad.Layout.Column
+import XMonad.Layout.Grid
+import XMonad.Layout.Spacing
+import XMonad.Actions.NoBorders
 
-import XMonad.Actions.Minimize
-import XMonad.Layout.Minimize
-
-import XMonad.Layout.TwoPane
-
-import XMonad.Layout.Accordion
-
-import XMonad.Actions.GridSelect
-
-alert = dzenConfig centered . show . round
-centered = 
-        onCurr (center 200 100)
-    >=> addArgs ["-fg", "#eceff4"]
-    >=> addArgs ["-bg", "#282a36"]
-
-------------------------------------------------------------------------
--- Key bindings. Add, modify or remove key bindings here.
---
+alert = dzenConfig cfg1 . show . round
+cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
 
 spawnSelectedName :: GSConfig String -> [(String, String)] -> X ()
 spawnSelectedName conf lst = gridselect conf lst >>= flip whenJust spawn
 
+
+--  --  --  --  --  --
+  -- Definitions  --
+--  --  --  --  --  --
+
+textEditor :: String
+textEditor = "emacsclient -c"
+
+terminalEm :: String
+terminalEm = "alacritty"
+
+terminalMultiplexer :: String
+terminalMultiplexer = "alacritty -e fish -c 'tmux attach || tmux'" -- If could not connect to the session, create one
+
+programsMenu :: String
+programsMenu = "dmenu_run"
+
+screenshooter :: (String, String)
+screenshooter = ("xfce4-screenshooter", "flameshot gui")
+
+gridPrograms :: [(String, String)]
+gridPrograms =
+  [ ( "pcmanfm"      , "pcmanfm"                                   )
+  , ( "brave"        , "brave"                                     )
+  , ( "bitwarden"    , "bitwarden"                                 )
+  , ( "ncmpcpp"      , "alacritty -e ncmpcpp"                      )
+  , ( "emacs"        , "alacritty -e emacsclient -c -nw"           )
+  , ( "emacs-gui"    , "emacsclient -c"                            )
+  , ( "teditor"      , "alacritty -e ted"                          )
+  , ( "nitrogen"     , "nitrogen"                                  )
+  , ( "transmission" , "transmission-gtk"                          )
+  , ( "ripcord"      , "ripcord"                                   )
+  , ( "palemoon"     , "palemoon"                                  )
+  , ( "luakit"       , "luakit"                                    )
+  , ( "discord"      , "brave --incognito https://discord.com/app" )
+  , ( "tmux"         , terminalMultiplexer                         )
+  ]
+
 myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 
-    -- launch a terminal
-    [ ((modm .|. shiftMask  , xK_Return ), spawn "alacritty")
+    [ ((modm .|. shiftMask  , xK_Return ), spawn terminalEm)
 
-    -- launch emacs client
-    , ((modm .|. controlMask, xK_Return ), spawn "emacsclient -c")
+    , ((modm .|. controlMask, xK_Return ), spawn textEditor)
 
-    {-
-    , ((modm .|. shiftMask  , xK_a      ), runSelectedAction defaultGSConfig
-        [ ("pcmanfm", spawn "pcmanfm")
-        , ("brave",   spawn "brave"  )
-        , ("ncmpcpp", spawn "alacritty -e fish -C /usr/bin/ncmpcpp")
-        ]) -}
+    , ((modm .|. controlMask
+             .|. shiftMask  , xK_Return ), spawn terminalMultiplexer)
 
-    , ((modm .|. shiftMask  , xK_a      ), spawnSelectedName defaultGSConfig
-      [ ( "pcmanfm"  , "pcmanfm"                                          )
-      , ( "brave"    , "brave"                                            )
-      , ( "ncmpcpp"  , "alacritty -e fish -C /usr/bin/ncmpcpp"            )
-      , ( "ted"      , "alacritty -e fish -C /home/arthur/.local/bin/ted" )
-      , ( "nitrogen" , "nitrogen"                                         )
-      ])
+    , ((modm .|. shiftMask
+             .|. controlMask, xK_a      ), spawnSelectedName defaultGSConfig gridPrograms)
 
     -- https://superuser.com/questions/389737/how-do-you-make-volume-keys-and-mute-key-work-in-xmonad
-    -- volume
     , ((modm                , xK_F6     ), lowerVolume 5 >> getVolume >>= alert)
     , ((modm                , xK_F8     ), raiseVolume 5 >> getVolume >>= alert)
     , ((modm .|. shiftMask  , xK_F6     ), lowerVolume 1 >> getVolume >>= alert)
@@ -93,24 +108,20 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
  -- , ((0                   , 0x1008FF12), toggleMute >> return ())
     , ((modm                , xK_F7     ), toggleMute >> return ())
     
-    
-    -- launch dmenu
-    , ((modm                , xK_p      ), spawn "dmenu_run")
+    , ((modm                , xK_p      ), spawn programsMenu)
 
-    -- Take a screenshot
-    , ((0                   , xK_Print  ), spawn "xfce4-screenshooter")
+    , ((modm .|. shiftMask  , xK_p      ), spawn "bash /home/arthur/scripts/search.sh")
 
-    -- close focused window
+    , ((0                   , xK_Print  ), spawn $ fst screenshooter)
+
+    , ((modm                , xK_Print  ), spawn $ snd screenshooter)
+
     , ((modm .|. shiftMask  , xK_c      ), kill)
 
-     -- Rotate through the available layout algorithms
     , ((modm                , xK_space  ), sendMessage NextLayout)
 
     --  Reset the layouts on the current workspace to default
     , ((modm .|. shiftMask  , xK_space  ), setLayout $ XMonad.layoutHook conf)
-
-    -- Resize viewed windows to the correct size
-    --, ((modm                , xK_n      ), refresh)
 
     , ((modm                , xK_n      ), withFocused minimizeWindow)
     , ((modm .|. shiftMask  , xK_n      ), withLastMinimized maximizeWindowAndFocus)
@@ -157,8 +168,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm                , xK_period ), sendMessage (IncMasterN (-1)))
 
     , ((modm                , xK_f      ), runSelectedAction defaultGSConfig $
-        map (\x -> (x, sendMessage $ JumpToLayout x))
-        ["Tiled", "MTiled", "BSP", "MBSP", "TwoPane", "MTwoPane", "Accordion", "MAccordion", "Mono", "Full"]
+        map (\x -> (x, sendMessage $ JumpToLayout x)) layoutNames
       )
 
     , ((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
@@ -169,10 +179,25 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
              .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
 
     -- Restart xmonad
-    , ((modm                , xK_q      ), spawn "killall xmobar; xmonad --restart")
+    , ((modm                , xK_q      ), spawn
+        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+    
+    , ((modm                , xK_u      ), incScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
+    
+    , ((modm                , xK_i      ), decScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_i      ), decWindowSpacing 5)
+    
+    , ((modm                , xK_o      ), setScreenSpacing (Border  0  0  0  0))
+    , ((modm .|. shiftMask  , xK_o      ), setWindowSpacing (Border 10 10 10 10))
+    
+    , ((modm                , xK_b      ), withFocused toggleBorder)
+
+    , ((modm                , xK_s      ), spawn "echo -ne '' | dmenu | xargs xinput --set-prop 8 169 1, 0, 0, 0, 1, 0, 0, 0, ") -- Change sensitivity
 
     -- Run xmessage with a summary of the default keybindings (useful for beginners)
-    , ((modm .|. shiftMask  , xK_slash  ), spawn ("echo \"" ++ help ++ "\" | xmessage -file -"))
+    , ((modm .|. shiftMask  , xK_slash  ),
+        spawn ("echo \"" ++ help ++ "\" > ~/.xmonad/help.txt && " ++ textEditor ++ " ~/.xmonad/help.txt"))
     ]
     ++
 
@@ -181,10 +206,12 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
         , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
     ++
 
+    {-
     [((m .|. modm, k), windows $ f i)
         | (i, k) <- zip (drop 9 $ XMonad.workspaces conf) [xK_1 .. xK_9]
         , (f, m) <- [(W.greedyView, controlMask), (W.shift, controlMask .|. shiftMask)]]
     ++
+    -}
 
     [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
         | (key, sc) <- [(xK_e, 0), (xK_w, 1)]
@@ -197,8 +224,8 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
 --
 myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     [ ((modm, button1), (\w -> focus w >> mouseMoveWindow w
-                        
                                        >> windows W.shiftMaster))
+      
     , ((modm, button2), (\w -> focus w >> windows W.shiftMaster))
 
     , ((modm, button3), (\w -> focus w >> mouseResizeWindow w
@@ -211,43 +238,46 @@ myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask, button5), (\w -> focus w >> sendMessage MirrorExpand)) ]
 
 
-
-myLayout = tiled ||| mirrortiled ||| bsp ||| mirrorbsp ||| two ||| twoMirror ||| acc ||| accMirror ||| mono ||| fullscreen
+layoutNames :: [String]
+layoutNames =
+    [ "Tiled"  , "MTiled"
+    , "Three"  , "MThree"
+    , "TwoPane", "MTwoPane"
+    , "Grid"   , "MGrid"
+    , "Column" , "MColumn"
+    , "Mono"   , "Full"
+    ]
+myLayout = tiled  ||| mirrortiled  ||| three ||| threeMirror ||| two ||| twoMirror |||
+           grid ||| gridMirror ||| column ||| columnMirror ||| mono  ||| fullscreen
   where
-    general = minimize
+    general2 = spacingRaw False (Border 0 0 0 0) True (Border 10 10 10 10) True
 
-    -- default tiling algorithm partitions the screen into two panes with more adjustment
-    tiled_template = general $ ResizableTall nmaster delta ratio []
-     
-    tiled          = renamed [Replace "Tiled" ] $ avoidStruts $        tiled_template
-    mirrortiled    = renamed [Replace "MTiled"] $ avoidStruts $ Mirror tiled_template
+    gridTemplate   = minimize $ noBorders $ Grid
+    grid           = renamed [Replace  "Grid"] $ general2 $ avoidStruts $        gridTemplate
+    gridMirror     = renamed [Replace "MGrid"] $ general2 $ avoidStruts $ Mirror gridTemplate
 
-    -- Real fullscreen
-    fullscreen     = renamed [Replace "Full"  ] $ general $ noBorders $ Full
+    tiled_template = minimize $ noBorders $ ResizableTall nmaster delta ratio []
+    tiled          = renamed [Replace "Tiled" ] $ general2 $ avoidStruts $        tiled_template
+    mirrortiled    = renamed [Replace "MTiled"] $ general2 $ avoidStruts $ Mirror tiled_template
 
-    -- Selected window divides into two
-    bsp_template   = general $ emptyBSP
-     
-    bsp            = renamed [Replace "BSP"   ] $ avoidStruts $        bsp_template
-    mirrorbsp      = renamed [Replace "MBSP"  ] $ avoidStruts $ Mirror bsp_template
+    fullscreen     = renamed [Replace "Full"  ] $ minimize $ noBorders $ Full
 
-    twoTemplate    = general $ TwoPane delta ratio
-    two            = renamed [Replace "TwoPane" ] $ avoidStruts $        twoTemplate
-    twoMirror      = renamed [Replace "MTwoPane"] $ avoidStruts $ Mirror twoTemplate
+    twoTemplate    = minimize $ noBorders $ TwoPane delta ratio
+    two            = renamed [Replace "TwoPane" ] $ general2 $ avoidStruts $        twoTemplate
+    twoMirror      = renamed [Replace "MTwoPane"] $ general2 $ avoidStruts $ Mirror twoTemplate
 
-    accTemplate    = general $ Accordion
-    acc            = renamed [Replace "Accordion" ] $ avoidStruts $        accTemplate
-    accMirror      = renamed [Replace "MAccordion"] $ avoidStruts $ Mirror accTemplate
+    mono           = renamed [Replace "Mono"  ] $ general2 $ avoidStruts $ minimize $ noBorders $ Full
 
-     -- One window
-    mono           = renamed [Replace "Mono"  ] $ avoidStruts $ general $ noBorders $ Full
+    threeTemplate  = minimize $ noBorders $ ThreeCol nmaster (delta) (ratio)
+    three          = renamed [Replace "Three" ] $ general2 $ avoidStruts $        threeTemplate
+    threeMirror    = renamed [Replace "MThree"] $ general2 $ avoidStruts $ Mirror threeTemplate
 
-     -- The default number of windows in the master pane
-    nmaster        = 1
+    columnTemplate = minimize $ noBorders $ Column 1
+    column         = renamed [Replace  "Column"] $ general2 $ avoidStruts $        columnTemplate
+    columnMirror   = renamed [Replace "MColumn"] $ general2 $ avoidStruts $ Mirror columnTemplate
 
-     -- Default proportion of screen occupied by master pane
-    ratio          = 1/2
-
+    nmaster        = 1 -- The default number of windows in the master pane
+    ratio          = 1/2 -- Default proportion of screen occupied by master pane
     delta          = 3/100
 
 
@@ -262,48 +292,56 @@ myEventHook = mempty
 
 myStartupHook = do
   spawn "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --output VGA1 --mode 1280x1024 --rate 60 --left-of HDMI1 && nitrogen --restore"
-  spawn "setxkbmap br &"
-  spawn "xsetroot -cursor_name left_ptr &"
-  spawn "xset s off &"
-  spawn "xset s 0 0 &"
-  spawn "xset -dpms &"
-  spawn "emacs --daemon &"
+  spawn "setxkbmap br"
+  spawn "xsetroot -cursor_name left_ptr"
+  spawn "xset s off"
+  spawn "xset s 0 0"
+  spawn "xset -dpms"
+  spawn "emacs --daemon"
+  spawn "dunst"
+  spawn "stalonetray"
 
 
 myPP = def { ppCurrent         = xmobarColor "#8fbcbb" "" . wrap "<" ">"
            , ppTitle           = xmobarColor "#8fbcbb" "" . shorten 32
            , ppHiddenNoWindows = xmobarColor "#4c566a" ""
-	   , ppHidden          = id
+           , ppHidden          = id
            , ppUrgent          = xmobarColor "red" "yellow"
-	   , ppWsSep           = ""
-	   , ppSep             = "  " }
+           , ppWsSep           = ""
+           , ppSep             = " - " }
 
 main = do
-  xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc"
-  xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc"
+  xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc --dock"
+  xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc --dock"
         
   xmonad $ docks def {
-        -- Basic configurations
     terminal           = "alacritty",
-    focusFollowsMouse  = True,
+    focusFollowsMouse  = False,
     clickJustFocuses   = False,
     borderWidth        = 1,
     modMask            = mod4Mask,
-    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"],
-    normalBorderColor  = "#282a36",
-    focusedBorderColor = "#ff5555",
+    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"], --, "A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8", "A9"],
+    normalBorderColor  = "#555555",
+    focusedBorderColor = "#AAAAAA",
       
-    -- Key bindings
     keys               = myKeys,
     mouseBindings      = myMouseBindings,
       
-    -- Hooks
     layoutHook         = myLayout,
     manageHook         = myManageHook,
     handleEventHook    = myEventHook,
     logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
     startupHook        = myStartupHook }
     
-
 help :: String
-help = "You does not need help"
+help = unlines
+    [ "Arthur Bacci's XMonad Config"
+    , ""
+    , "This configuration was made using alacritty as the terminal emulator"
+    , ""
+    , "    Mod-S-Escape      Opens the terminal emulator"
+    , "    Mod-C-S-Escape    Opens the text editor"
+    , "    Mod-C-S-A         Opens the grid launcher"
+    ]
+
+
