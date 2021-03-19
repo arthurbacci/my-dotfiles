@@ -1,0 +1,215 @@
+#+TITLE: Readme
+#+AUTHOR: Arthur Bacci
+
+* Dependencies
+
+The dependencies needed for this XMonad configuration:
+
+- ~dzen2~
+- ~emacs~               (can be easily changed)
+- ~alacritty~           (can be easily changed)
+- ~st~                  (can be easily changed)
+- ~tmux~                (can be easily changed)
+- ~dmenu~               (can be easily changed)
+- ~xfce4-screenshooter~ (can be easily changed)
+- ~flameshot~           (can be easily changed)
+
+
+* Imports
+
+#+BEGIN_SRC haskell
+import XMonad hiding ((|||))
+import Data.Monoid
+import Data.Tuple
+import System.Exit
+import XMonad.Util.Run
+import qualified XMonad.StackSet as W
+import qualified Data.Map        as M
+-- Layouts
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.BinarySpacePartition
+import XMonad.Layout.Tabbed
+import XMonad.Layout.TwoPane
+import XMonad.Layout.Accordion
+-- Layout modifiers
+import XMonad.Layout.Spacing           -- Adds some space between the windows
+import XMonad.Layout.NoBorders         -- Removes the borders
+import XMonad.Layout.LayoutCombinators -- To use JumpToLayout |
+import XMonad.Layout.Renamed -- Rename the layouts |
+import XMonad.Hooks.ManageDocks -- Related to the bar |
+import XMonad.Hooks.DynamicLog
+import XMonad.Actions.Volume
+import XMonad.Util.Dzen
+import XMonad.Actions.Minimize
+import XMonad.Layout.Minimize
+import XMonad.Actions.GridSelect
+import XMonad.Layout.ThreeColumns
+import XMonad.Layout.Column
+import XMonad.Layout.Grid
+import XMonad.Actions.NoBorders
+#+END_SRC
+
+These are the imports, take a look at /Hackage/ to know what each one does.
+
+* Dzen Alert Configuration
+
+#+BEGIN_SRC haskell
+alert = dzenConfig cfg1 . show . round
+cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
+#+END_SRC
+
+This is the setup of ~dzen~, it is used to display the volume when pressing the button to change the volume,
+in order to it to work, you need to have ~dzen2~ installed.
+
+Of course you can change ~-fg~ and ~-bg~ options to the color of your preference!
+
+~-xs~ option is the display were it will be displayed, in the case of a single monitor setup, you don't need to declare it, do:
+
+#+BEGIN_SRC haskell
+cfg1 = addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
+#+END_SRC
+
+<<program-spawner>>
+* Program Spawner
+
+#+BEGIN_SRC haskell
+spawnSelectedName :: GSConfig String -> [(String, String)] -> X ()
+spawnSelectedName conf lst = gridselect conf lst >>= flip whenJust spawn
+#+END_SRC
+
+This is a function that will take a list of strings and tranform it into a grid. A example of this function being used is
+the grid that appears when typing ~Mod-Ctrl-Shift-A~.
+
+* Definitions
+
+#+BEGIN_SRC haskell
+--  --  --  --  --  --
+  -- Definitions  --
+--  --  --  --  --  --
+
+textEditor :: String
+textEditor = "emacsclient -c"
+
+terminalEm :: String
+terminalEm = "alacritty"
+
+sencondTerminalEm :: String
+sencondTerminalEm = "st"
+
+terminalMultiplexer :: String
+terminalMultiplexer = terminalEm ++ " -e fish -c 'tmux attach || tmux'" -- If could not connect to the session, create one
+
+programsMenu :: String
+programsMenu = "dmenu_run"
+
+screenshooter :: (String, String)
+screenshooter = ("xfce4-screenshooter", "flameshot gui")
+
+gridPrograms :: [(String, String)]
+gridPrograms =
+  [ ( "pcmanfm"      , "pcmanfm"                                   )
+  , ( "brave"        , "brave"                                     )
+  , ( "bitwarden"    , "bitwarden"                                 )
+  , ( "ncmpcpp"      , terminalEm ++ " -e ncmpcpp"                 )
+  , ( "emacs"        , terminalEm ++ " -e emacsclient -c -nw"      )
+  , ( "emacs-gui"    , "emacsclient -c"                            )
+  , ( "teditor"      , terminalEm ++ " -e ted"                     )
+  , ( "nitrogen"     , "nitrogen"                                  )
+  , ( "transmission" , "transmission-gtk"                          )
+  , ( "ripcord"      , "ripcord"                                   )
+  , ( "palemoon"     , "palemoon"                                  )
+  , ( "luakit"       , "luakit"                                    )
+  , ( "discord"      , "brave --incognito https://discord.com/app" )
+  , ( "tmux"         , terminalMultiplexer                         )
+  ]
+#+END_SRC
+
+The ~textEditor~ variable is the default text editor, in my case, the /Emacs/ client.
+
+The ~terminalEm~ variable is the default terminal emulator, it will be opened with ~Mod-Shift-Enter~ and it will run the terminal-based
+programs.
+
+The ~secondTerminalEm~ variable is the alternative terminal emulator, it will be opened with ~Mod-Shift-T~.
+
+The ~terminalMultiplexer~ variable is the default terminal multiplexer, by default, ~tmux~. It will be opened by ~Mod-Ctrl-Shift-Enter~.
+~tmux attach || tmux~ means that it will try to connect to tmux and, if it returns error, then it will create a new session of tmux.
+
+The ~programsMenu~ is the program launcher, by default, ~dmenu_run~. It is opened by ~Mod-P~
+
+The ~screenshooter~ tuple defines two screenshooters, the first can be opened by ~PrintScreen~ and the second by ~Mod-PrintScreen~.
+
+The ~gridPrograms~ is a list of the programs that will appear in the ~Mod-Ctrl-Shift-A~ program launcher. It is applied the [[program-spawner][function]]
+that transforms it into a list of spawns.
+
+* TODO Keys
+
+
+* Mouse Bindings
+
+#+BEGIN_SRC haskell
+------------------------------------------------------------------------
+-- Mouse bindings: default actions bound to mouse events
+--
+myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
+    [ ((modm, button1), (\w -> focus w >> mouseMoveWindow w
+                                       >> windows W.shiftMaster))
+
+    , ((modm, button2), (\w -> focus w >> windows W.shiftMaster))
+
+    , ((modm, button3), (\w -> focus w >> mouseResizeWindow w
+                                       >> windows W.shiftMaster))
+
+    , ((modm, button4), (\w -> focus w >> sendMessage Shrink))
+    , ((modm, button5), (\w -> focus w >> sendMessage Expand))
+
+    , ((modm .|. shiftMask, button4), (\w -> focus w >> sendMessage MirrorShrink))
+    , ((modm .|. shiftMask, button5), (\w -> focus w >> sendMessage MirrorExpand)) ]
+
+#+END_SRC
+
+Mouse keybings.
+
+** Move
+
+#+BEGIN_SRC haskell
+    [ ((modm, button1), (\w -> focus w >> mouseMoveWindow w
+                                       >> windows W.shiftMaster))
+#+END_SRC
+
+When pressing the left button (~button1~) while holding the ~Mod~ key, it will move the window.
+
+** Shift Master
+
+#+BEGIN_SRC haskell
+    , ((modm, button2), (\w -> focus w >> windows W.shiftMaster))
+#+END_SRC
+
+When pressing the middle button (~button2~) while holding the ~Mod~ key, it will move the window to the master pane.
+
+
+** Resize
+
+#+BEGIN_SRC haskell
+    , ((modm, button3), (\w -> focus w >> mouseResizeWindow w
+                                       >> windows W.shiftMaster))
+#+END_SRC
+
+When pressing the right button (~button3~) while holding the ~Mod~ key, it will resize the window.
+
+** Shrink and Expand
+
+#+BEGIN_SRC haskell
+    , ((modm, button4), (\w -> focus w >> sendMessage Shrink))
+    , ((modm, button5), (\w -> focus w >> sendMessage Expand))
+
+    , ((modm .|. shiftMask, button4), (\w -> focus w >> sendMessage MirrorShrink))
+    , ((modm .|. shiftMask, button5), (\w -> focus w >> sendMessage MirrorExpand)) ]
+#+END_SRC
+
+When pressing the up scroll (~button4~) while holding the ~Mod~ key, it will Shrink the Master Pane.
+
+When pressing the down scroll (~button5~) while holding the ~Mod~ key, it will Expand the Master Pane.
+
+When pressing the up scroll (~button4~) while holding ~Mod-Shift~, it will Shrink the selected window.
+
+When pressing the down scroll (~button5~) while holding ~Mod-Shift~, it will Expand the selected window.
