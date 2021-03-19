@@ -14,10 +14,9 @@ The dependencies needed for this XMonad configuration:
 - ~xfce4-screenshooter~ (can be easily changed)
 - ~flameshot~           (can be easily changed)
 
-
 * Imports
 
-#+BEGIN_SRC haskell
+#+BEGIN_SRC haskell :tangle export.hs
 import XMonad hiding ((|||))
 import Data.Monoid
 import Data.Tuple
@@ -25,18 +24,16 @@ import System.Exit
 import XMonad.Util.Run
 import qualified XMonad.StackSet as W
 import qualified Data.Map        as M
--- Layouts
 import XMonad.Layout.ResizableTile
 import XMonad.Layout.BinarySpacePartition
 import XMonad.Layout.Tabbed
 import XMonad.Layout.TwoPane
 import XMonad.Layout.Accordion
--- Layout modifiers
-import XMonad.Layout.Spacing           -- Adds some space between the windows
-import XMonad.Layout.NoBorders         -- Removes the borders
-import XMonad.Layout.LayoutCombinators -- To use JumpToLayout |
-import XMonad.Layout.Renamed -- Rename the layouts |
-import XMonad.Hooks.ManageDocks -- Related to the bar |
+import XMonad.Layout.Spacing
+import XMonad.Layout.NoBorders
+import XMonad.Layout.LayoutCombinators
+import XMonad.Layout.Renamed
+import XMonad.Hooks.ManageDocks
 import XMonad.Hooks.DynamicLog
 import XMonad.Actions.Volume
 import XMonad.Util.Dzen
@@ -53,7 +50,7 @@ These are the imports, take a look at /Hackage/ to know what each one does.
 
 * Dzen Alert Configuration
 
-#+BEGIN_SRC haskell
+#+BEGIN_SRC haskell :tangle export.hs
 alert = dzenConfig cfg1 . show . round
 cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
 #+END_SRC
@@ -72,7 +69,7 @@ cfg1 = addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
 <<program-spawner>>
 * Program Spawner
 
-#+BEGIN_SRC haskell
+#+BEGIN_SRC haskell :tangle export.hs
 spawnSelectedName :: GSConfig String -> [(String, String)] -> X ()
 spawnSelectedName conf lst = gridselect conf lst >>= flip whenJust spawn
 #+END_SRC
@@ -82,11 +79,7 @@ the grid that appears when typing ~Mod-Ctrl-Shift-A~.
 
 * Definitions
 
-#+BEGIN_SRC haskell
---  --  --  --  --  --
-  -- Definitions  --
---  --  --  --  --  --
-
+#+BEGIN_SRC haskell :tangle export.hs
 textEditor :: String
 textEditor = "emacsclient -c"
 
@@ -97,7 +90,7 @@ sencondTerminalEm :: String
 sencondTerminalEm = "st"
 
 terminalMultiplexer :: String
-terminalMultiplexer = terminalEm ++ " -e fish -c 'tmux attach || tmux'" -- If could not connect to the session, create one
+terminalMultiplexer = terminalEm ++ " -e fish -c 'tmux attach || tmux'"
 
 programsMenu :: String
 programsMenu = "dmenu_run"
@@ -143,13 +136,9 @@ that transforms it into a list of spawns.
 
 * TODO Keys
 
-
 * Mouse Bindings
 
-#+BEGIN_SRC haskell
-------------------------------------------------------------------------
--- Mouse bindings: default actions bound to mouse events
---
+#+BEGIN_SRC haskell :tangle export.hs
 myMouseBindings (XConfig {XMonad.modMask = modm}) = M.fromList $
     [ ((modm, button1), (\w -> focus w >> mouseMoveWindow w
                                        >> windows W.shiftMaster))
@@ -186,7 +175,6 @@ When pressing the left button (~button1~) while holding the ~Mod~ key, it will m
 
 When pressing the middle button (~button2~) while holding the ~Mod~ key, it will move the window to the master pane.
 
-
 ** Resize
 
 #+BEGIN_SRC haskell
@@ -213,3 +201,187 @@ When pressing the down scroll (~button5~) while holding the ~Mod~ key, it will E
 When pressing the up scroll (~button4~) while holding ~Mod-Shift~, it will Shrink the selected window.
 
 When pressing the down scroll (~button5~) while holding ~Mod-Shift~, it will Expand the selected window.
+
+* Layouts
+
+#+BEGIN_SRC haskell :tangle export.hs
+layoutNames :: [String]
+layoutNames =
+    [ "Tiled"  , "MTiled"
+    , "Three"  , "MThree"
+    , "TwoPane", "MTwoPane"
+    , "Grid"   , "MGrid"
+    , "Column" , "MColumn"
+    , "Mono"   , "Full"
+    ]
+myLayout = tiled ||| mirrortiled ||| three  ||| threeMirror  ||| two  ||| twoMirror
+       ||| grid  ||| gridMirror  ||| column ||| columnMirror ||| mono ||| fullscreen
+  where
+    general2 = spacingRaw False (Border 0 0 0 0) True (Border 10 10 10 10) True
+
+    gridTemplate   = minimize $ noBorders $ Grid
+    grid           = renamed [Replace  "Grid"] $ general2 $ avoidStruts $        gridTemplate
+    gridMirror     = renamed [Replace "MGrid"] $ general2 $ avoidStruts $ Mirror gridTemplate
+
+    tiled_template = minimize $ noBorders $ ResizableTall nmaster delta ratio []
+    tiled          = renamed [Replace "Tiled" ] $ general2 $ avoidStruts $        tiled_template
+    mirrortiled    = renamed [Replace "MTiled"] $ general2 $ avoidStruts $ Mirror tiled_template
+
+    fullscreen     = renamed [Replace "Full"  ] $ minimize $ noBorders $ Full
+
+    twoTemplate    = minimize $ noBorders $ TwoPane delta ratio
+    two            = renamed [Replace "TwoPane" ] $ general2 $ avoidStruts $        twoTemplate
+    twoMirror      = renamed [Replace "MTwoPane"] $ general2 $ avoidStruts $ Mirror twoTemplate
+
+    mono           = renamed [Replace "Mono"  ] $ general2 $ avoidStruts $ minimize $ noBorders $ Full
+
+    threeTemplate  = minimize $ noBorders $ ThreeCol nmaster (delta) (ratio)
+    three          = renamed [Replace "Three" ] $ general2 $ avoidStruts $        threeTemplate
+    threeMirror    = renamed [Replace "MThree"] $ general2 $ avoidStruts $ Mirror threeTemplate
+
+    columnTemplate = minimize $ noBorders $ Column 1
+    column         = renamed [Replace  "Column"] $ general2 $ avoidStruts $        columnTemplate
+    columnMirror   = renamed [Replace "MColumn"] $ general2 $ avoidStruts $ Mirror columnTemplate
+
+    nmaster        = 1
+    ratio          = 1/2
+    delta          = 3/100
+#+END_SRC
+
+The layouts are the different modes of tiling windows, you can cycle throught the layouts with ~Mod-Space~. ~Mod
+
+** Layout Names
+
+#+BEGIN_SRC haskell
+layoutNames :: [String]
+layoutNames =
+    [ "Tiled"  , "MTiled"
+    , "Three"  , "MThree"
+    , "TwoPane", "MTwoPane"
+    , "Grid"   , "MGrid"
+    , "Column" , "MColumn"
+    , "Mono"   , "Full"
+    ]
+#+END_SRC
+
+In order to choose the layout with ~Mod-F~, they need (probally not, but I did not found another way) to be listed in a array.
+If you add a new mode, please remember to add it here, otherwise it will not be listed in ~Mod-F~. The name needs to be equal
+to the name that you used in ~renamed~.
+
+** The Layout List
+
+This part is very simple
+
+#+BEGIN_SRC haskell
+myLayout = tiled ||| mirrortiled ||| three  ||| threeMirror  ||| two  ||| twoMirror
+       ||| grid  ||| gridMirror  ||| column ||| columnMirror ||| mono ||| fullscreen
+#+END_SRC
+
+Basically, these are the /selected/ layouts, but where are they defined? In the next session.
+
+** The Definitions
+
+#+BEGIN_SRC haskell
+  where
+    general2 = spacingRaw False (Border 0 0 0 0) True (Border 10 10 10 10) True
+
+    gridTemplate   = minimize $ noBorders $ Grid
+    grid           = renamed [Replace  "Grid"] $ general2 $ avoidStruts $        gridTemplate
+    gridMirror     = renamed [Replace "MGrid"] $ general2 $ avoidStruts $ Mirror gridTemplate
+
+    tiled_template = minimize $ noBorders $ ResizableTall nmaster delta ratio []
+    tiled          = renamed [Replace "Tiled" ] $ general2 $ avoidStruts $        tiled_template
+    mirrortiled    = renamed [Replace "MTiled"] $ general2 $ avoidStruts $ Mirror tiled_template
+
+    fullscreen     = renamed [Replace "Full"  ] $ minimize $ noBorders $ Full
+
+    twoTemplate    = minimize $ noBorders $ TwoPane delta ratio
+    two            = renamed [Replace "TwoPane" ] $ general2 $ avoidStruts $        twoTemplate
+    twoMirror      = renamed [Replace "MTwoPane"] $ general2 $ avoidStruts $ Mirror twoTemplate
+
+    mono           = renamed [Replace "Mono"  ] $ general2 $ avoidStruts $ minimize $ noBorders $ Full
+
+    threeTemplate  = minimize $ noBorders $ ThreeCol nmaster (delta) (ratio)
+    three          = renamed [Replace "Three" ] $ general2 $ avoidStruts $        threeTemplate
+    threeMirror    = renamed [Replace "MThree"] $ general2 $ avoidStruts $ Mirror threeTemplate
+
+    columnTemplate = minimize $ noBorders $ Column 1
+    column         = renamed [Replace  "Column"] $ general2 $ avoidStruts $        columnTemplate
+    columnMirror   = renamed [Replace "MColumn"] $ general2 $ avoidStruts $ Mirror columnTemplate
+
+    nmaster        = 1
+    ratio          = 1/2
+    delta          = 3/100
+#+END_SRC
+
+That's where whe define the variables that we used in our layout list.
+
+*** The Spacing
+
+#+BEGIN_SRC haskell
+    general2 = spacingRaw False (Border 0 0 0 0) True (Border 10 10 10 10) True
+#+END_SRC haskell
+
+That's a variable that corresponds to a function that will be applied to /most/ (not all) layouts.
+It is the spacing between windows, some people call this /gap/.
+
+*** The Layouts
+
+/Most/ of the layouts are defined like this:
+
+#+BEGIN_SRC haskell
+    gridTemplate   = minimize $ noBorders $ Grid
+    grid           = renamed [Replace  "Grid"] $ general2 $ avoidStruts $        gridTemplate
+    gridMirror     = renamed [Replace "MGrid"] $ general2 $ avoidStruts $ Mirror gridTemplate
+#+END_SRC
+
+The template is the base of the layout.
+There are two layouts made from the template: the layout and the layout mirror.
+
+#+BEGIN_SRC haskell
+    gridTemplate   = minimize $ noBorders $ Grid
+    grid           = renamed [Replace  "Grid"] $ general2 $ avoidStruts $        gridTemplate
+    gridMirror     = renamed [Replace "MGrid"] $ general2 $ avoidStruts $ Mirror gridTemplate
+
+    tiled_template = minimize $ noBorders $ ResizableTall nmaster delta ratio []
+    tiled          = renamed [Replace "Tiled" ] $ general2 $ avoidStruts $        tiled_template
+    mirrortiled    = renamed [Replace "MTiled"] $ general2 $ avoidStruts $ Mirror tiled_template
+
+    fullscreen     = renamed [Replace "Full"  ] $ minimize $ noBorders $ Full
+
+    twoTemplate    = minimize $ noBorders $ TwoPane delta ratio
+    two            = renamed [Replace "TwoPane" ] $ general2 $ avoidStruts $        twoTemplate
+    twoMirror      = renamed [Replace "MTwoPane"] $ general2 $ avoidStruts $ Mirror twoTemplate
+
+    mono           = renamed [Replace "Mono"  ] $ general2 $ avoidStruts $ minimize $ noBorders $ Full
+
+    threeTemplate  = minimize $ noBorders $ ThreeCol nmaster (delta) (ratio)
+    three          = renamed [Replace "Three" ] $ general2 $ avoidStruts $        threeTemplate
+    threeMirror    = renamed [Replace "MThree"] $ general2 $ avoidStruts $ Mirror threeTemplate
+
+    columnTemplate = minimize $ noBorders $ Column 1
+    column         = renamed [Replace  "Column"] $ general2 $ avoidStruts $        columnTemplate
+    columnMirror   = renamed [Replace "MColumn"] $ general2 $ avoidStruts $ Mirror columnTemplate
+#+END_SRC
+
+The ~minimize~ is the layout modifier that makes minimizing windows possible: to minimize, press ~Mod-N~, to undo, press ~Mod-Shift-N~.
+
+The ~renamed [Replace ...]~ replaces the name of the layout.
+
+~avoidStruts~ makes the windows don't overlay the bar.
+
+*** ~nmaster~, ~ratio~ and ~delta~
+
+#+BEGIN_SRC haskell
+    nmaster        = 1
+    ratio          = 1/2
+    delta          = 3/100
+#+END_SRC
+
+~nmaster~ is the /default/ amount of windows in the master pane. This amount can be increased by ~Mod-,~ and
+decreased by ~Mod-.~.
+
+~ratio~ is the fraction of the screen that the master pane takes, can be increased by ~Mod-L~ and decreased
+by ~Mod-H~.
+
+~delta~ is how much ~ratio~ increases or decreases when presing ~Mod-L~ or ~Mod-H~.
