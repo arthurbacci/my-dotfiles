@@ -13,6 +13,10 @@ The dependencies needed for this XMonad configuration:
 - ~dmenu~               (can be easily changed)
 - ~xfce4-screenshooter~ (can be easily changed)
 - ~flameshot~           (can be easily changed)
+- ~emacs~               (can be easily changed)
+- ~dunst~               (can be easily changed)
+- ~stalonetray~
+- ~xmobar~
 
 * Imports
 
@@ -134,7 +138,249 @@ The ~screenshooter~ tuple defines two screenshooters, the first can be opened by
 The ~gridPrograms~ is a list of the programs that will appear in the ~Mod-Ctrl-Shift-A~ program launcher. It is applied the [[program-spawner][function]]
 that transforms it into a list of spawns.
 
-* TODO Keys
+* Keys
+#+BEGIN_SRC haskell :tangle export.hs
+myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
+
+    [ ((modm .|. shiftMask  , xK_Return ), spawn terminalEm)
+    , ((modm .|. shiftMask  , xK_t      ), spawn sencondTerminalEm)
+    , ((modm .|. controlMask, xK_Return ), spawn textEditor)
+
+    , ((modm .|. controlMask
+             .|. shiftMask  , xK_Return ), spawn terminalMultiplexer)
+
+    , ((modm .|. shiftMask
+             .|. controlMask, xK_a      ), spawnSelectedName defaultGSConfig gridPrograms)
+
+    , ((0                   , xK_Print  ), spawn $ fst screenshooter)
+    , ((modm                , xK_Print  ), spawn $ snd screenshooter)
+
+    , ((modm                , xK_p      ), spawn programsMenu)
+
+    , ((modm .|. shiftMask  , xK_p      ), spawn "bash /home/arthur/scripts/search.sh")
+    , ((modm .|. shiftMask  , xK_b      ), spawn
+        "BRIGHTNESS=$(echo -ne '' | dmenu -p 'brightness:') ; xrandr --output HDMI1 --brightness $BRIGHTNESS --output VGA1 --brightness $BRIGHTNESS")
+    , ((modm                , xK_s      ), spawn "echo -ne '' | dmenu | xargs xinput --set-prop 8 169 1, 0, 0, 0, 1, 0, 0, 0, ")
+
+    , ((modm                , xK_F6     ), lowerVolume 5 >> getVolume >>= alert)
+    , ((modm                , xK_F8     ), raiseVolume 5 >> getVolume >>= alert)
+    , ((modm .|. shiftMask  , xK_F6     ), lowerVolume 1 >> getVolume >>= alert)
+    , ((modm .|. shiftMask  , xK_F8     ), raiseVolume 1 >> getVolume >>= alert)
+    , ((0                   , 0x1008FF11), lowerVolume 5 >> getVolume >>= alert)
+    , ((0                   , 0x1008FF13), raiseVolume 5 >> getVolume >>= alert)
+    , ((shiftMask           , 0x1008FF11), lowerVolume 1 >> getVolume >>= alert)
+    , ((shiftMask           , 0x1008FF13), raiseVolume 1 >> getVolume >>= alert)
+ -- , ((0                   , 0x1008FF12), toggleMute >> return ())
+    , ((modm                , xK_F7     ), toggleMute >> return ()
+
+    , ((modm .|. shiftMask  , xK_c      ), kill)
+
+    , ((modm                , xK_space  ), sendMessage NextLayout)
+    , ((modm .|. shiftMask  , xK_space  ), setLayout $ XMonad.layoutHook conf)
+    , ((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
+        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))
+
+    , ((modm                , xK_n      ), withFocused minimizeWindow)
+    , ((modm .|. shiftMask  , xK_n      ), withLastMinimized maximizeWindowAndFocus)
+
+    , ((modm                , xK_g      ), goToSelected defaultGSConfig)
+
+    , ((modm                , xK_j      ), windows W.focusDown  )
+    , ((modm                , xK_k      ), windows W.focusUp    )
+    , ((modm                , xK_m      ), windows W.focusMaster)
+
+    , ((modm                , xK_Return ), windows W.swapMaster)
+    , ((modm .|. shiftMask  , xK_j      ), windows W.swapDown  )
+    , ((modm .|. shiftMask  , xK_k      ), windows W.swapUp    )
+
+    , ((modm                , xK_h      ), sendMessage Shrink)
+    , ((modm                , xK_l      ), sendMessage Expand)
+    , ((modm .|. shiftMask  , xK_h      ), sendMessage MirrorShrink)
+    , ((modm .|. shiftMask  , xK_l      ), sendMessage MirrorExpand)
+
+    , ((modm                , xK_t      ), withFocused $ windows . W.sink)
+
+    , ((modm                , xK_comma  ), sendMessage (IncMasterN 1))
+    , ((modm                , xK_period ), sendMessage (IncMasterN (-1)))
+
+    , ((modm                , xK_f      ), runSelectedAction defaultGSConfig $
+        map (\x -> (x, sendMessage $ JumpToLayout x)) layoutNames)
+
+    , ((modm .|. shiftMask
+             .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
+
+    , ((modm                , xK_q      ), spawn
+        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+
+    , ((modm                , xK_u      ), incScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
+    , ((modm                , xK_i      ), decScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_i      ), decWindowSpacing 5)
+
+    , ((modm                , xK_o      ), setScreenSpacing (Border  0  0  0  0))
+    , ((modm .|. shiftMask  , xK_o      ), setWindowSpacing (Border 10 10 10 10))
+
+    , ((modm                , xK_b      ), withFocused toggleBorder)
+
+
+    , ((modm .|. shiftMask  , xK_slash  ),
+        spawn ("echo \"" ++ help ++ "\" > ~/.xmonad/help.txt && " ++ textEditor ++ " ~/.xmonad/help.txt"))
+    ]
+    ++
+
+    [((m .|. modm, k), windows $ f i)
+        | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
+        , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
+    ++
+
+    [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
+        | (key, sc) <- [(xK_e, 0), (xK_w, 1)]
+        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+#+END_SRC
+
+That's the part of the code where all the keyboard keybindings are defined.
+
+** Programs
+
+#+BEGIN_SRC haskell
+    [ ((modm .|. shiftMask  , xK_Return ), spawn terminalEm)
+    , ((modm .|. shiftMask  , xK_t      ), spawn sencondTerminalEm)
+    , ((modm .|. controlMask, xK_Return ), spawn textEditor)
+
+    , ((modm .|. controlMask
+             .|. shiftMask  , xK_Return ), spawn terminalMultiplexer)
+
+    , ((modm .|. shiftMask
+             .|. controlMask, xK_a      ), spawnSelectedName defaultGSConfig gridPrograms)
+
+    , ((0                   , xK_Print  ), spawn $ fst screenshooter)
+    , ((modm                , xK_Print  ), spawn $ snd screenshooter)
+
+    , ((modm                , xK_p      ), spawn programsMenu)
+
+    , ((modm .|. shiftMask  , xK_p      ), spawn "bash /home/arthur/scripts/search.sh")
+
+    , ((modm .|. shiftMask  , xK_b      ), spawn
+        "BRIGHTNESS=$(echo -ne '' | dmenu -p 'brightness:') ; xrandr --output HDMI1 --brightness $BRIGHTNESS --output VGA1 --brightness $BRIGHTNESS")
+
+    , ((modm                , xK_s      ), spawn "echo -ne '' | dmenu | xargs xinput --set-prop 8 169 1, 0, 0, 0, 1, 0, 0, 0, ")
+
+#+END_SRC
+
+- ~Mod-Shift-RET~ opens the primary terminal emulator.
+- ~Mod-Shift-T~ opens the secondary terminal emulator.
+- ~Mod-Ctrl-Shift-RET~ opens the terminal multiplexer.
+- ~Mod-Ctrl-Shift-A~ opens the grid program launcher.
+- ~PrintScreen~ opens the primary screenshooter.
+- ~Mod-PrintScreen~ opens the secondary screenshooter.
+- ~Mod-P~ opens the program launcher.
+- ~Mod-Shift-P~ opens a script that I will upload soon.
+- ~Mod-Shift-B~ opens a script with ~dmenu~ that changes the brightness of the screen. If you use a
+  single monitor setup, you will need to modify it.
+- ~Mod-S~ opens a script with ~dmenu~ that changes the sensitivity of the mouse. ~1~ is the default,
+  ~2~ is 1/2 sensitive, ~0.5~ is twice sensitive.
+
+** Volume keys
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_F6     ), lowerVolume 5 >> getVolume >>= alert)
+    , ((modm                , xK_F8     ), raiseVolume 5 >> getVolume >>= alert)
+    , ((modm .|. shiftMask  , xK_F6     ), lowerVolume 1 >> getVolume >>= alert)
+    , ((modm .|. shiftMask  , xK_F8     ), raiseVolume 1 >> getVolume >>= alert)
+    , ((0                   , 0x1008FF11), lowerVolume 5 >> getVolume >>= alert)
+    , ((0                   , 0x1008FF13), raiseVolume 5 >> getVolume >>= alert)
+    , ((shiftMask           , 0x1008FF11), lowerVolume 1 >> getVolume >>= alert)
+    , ((shiftMask           , 0x1008FF13), raiseVolume 1 >> getVolume >>= alert)
+ -- , ((0                   , 0x1008FF12), toggleMute >> return ())
+    , ((modm                , xK_F7     ), toggleMute >> return ()
+#+END_SRC
+
+- ~Mod-F6~ or multimedia key: decrease volume
+- ~Mod-F8~ or multimedia key: increase volume
+- ~Mod-Shift-F6~ or ~Mod~ plus multimedia key: decrease volume (less sensitive)
+- ~Mod-Shift-F8~ or ~Mod~ plus multimedia key: increase volume (less sensitive)
+- ~Mod-Shift-F7~: toggle mute
+
+If you have a /mute/ multimedia key, feel free to uncomment the commented line.
+
+[[https://superuser.com/questions/389737/how-do-you-make-volume-keys-and-mute-key-work-in-xmonad][What are those codes?]]
+
+** I want to close it!
+
+#+BEGIN_SRC haskell
+    , ((modm .|. shiftMask  , xK_c      ), kill)
+#+END_SRC
+
+When pressing ~Mod-Shift-C~, it will close the focused window.
+
+** Change layout
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_space  ), sendMessage NextLayout)
+    , ((modm .|. shiftMask  , xK_space  ), setLayout $ XMonad.layoutHook conf)
+    , ((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
+        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))
+#+END_SRC
+
+- ~Mod-SPC~ changes to the next layout.
+- ~Mod-Shift-SPC~ switches to the first layout.
+- ~Mod-Shift-L~ opens a grid menu for selecting the layout.
+
+** Minimize windows
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_n      ), withFocused minimizeWindow)
+    , ((modm .|. shiftMask  , xK_n      ), withLastMinimized maximizeWindowAndFocus)
+#+END_SRC
+
+- ~Mod-N~ minimizes the focused window.
+- ~Mod-Shift-N~ deminimizes the last minimized window.
+
+** Window selector
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_g      ), goToSelected defaultGSConfig)
+#+END_SRC
+
+Open a grid for selecting a window to focus. The window can be in any workspace!
+
+** Cycle the focused window
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_j      ), windows W.focusDown  )
+    , ((modm                , xK_k      ), windows W.focusUp    )
+    , ((modm                , xK_m      ), windows W.focusMaster)
+#+END_SRC
+
+- ~Mod-J~ Cycle windows.
+- ~Mod-K~ Cycle windows in the inverse direction.
+- ~Mod-M~ Focus the master window.
+
+** Moving windows
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_Return ), windows W.swapMaster)
+    , ((modm .|. shiftMask  , xK_j      ), windows W.swapDown  )
+    , ((modm .|. shiftMask  , xK_k      ), windows W.swapUp    )
+#+END_SRC
+
+- ~Mod-RET~ Moves the selected window to the master pane.
+- ~Mod-Shift-J~ Moves the window down.
+- ~Mod-Shift-K~ Moves the window up.
+
+** Shrink and expand
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_h      ), sendMessage Shrink)
+    , ((modm                , xK_l      ), sendMessage Expand)
+    , ((modm .|. shiftMask  , xK_h      ), sendMessage MirrorShrink)
+    , ((modm .|. shiftMask  , xK_l      ), sendMessage MirrorExpand)
+#+END_SRC
+
+- ~Mod-H~ Shrink the master pane.
+- ~Mod-L~ Expand the master pane.
+- ~Mod-Shift-H~ Shrink the selected window.
+- ~Mod-Shift-L~ Expand the selected window.
 
 * Mouse Bindings
 
@@ -596,10 +842,28 @@ Here we just copy the keybindings that we defined soon.
 
 We just copy the hooks.
 
-** The Log Hook
+** The log hook
 
     #+BEGIN_SRC haskell
     logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
     #+END_SRC haskell
 
     The log hook is what puts our data in XMobar (or other bar). If you use a single monitor setup, then follow [[xmobar-pipes][XMobar Pipes.]]
+
+* The help
+
+#+BEGIN_SRC haskell
+help :: String
+help = unlines
+    [ "Arthur Bacci's XMonad Config"
+    , ""
+    , "This configuration was made using alacritty as the terminal emulator"
+    , ""
+    , "    Mod-S-Escape      Opens the terminal emulator"
+    , "    Mod-C-S-Escape    Opens the text editor"
+    , "    Mod-C-S-A         Opens the grid launcher"
+    ]
+#+END_SRC
+
+This is the help file that opens when you press ~Mod-Shift-/~. How you can see, it is not complete yet, I priorized writing this that
+writing the help.
