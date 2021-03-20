@@ -1,4 +1,4 @@
-#+TITLE: Readme
+#+TITLE: README
 #+AUTHOR: Arthur Bacci
 
 * Dependencies
@@ -385,3 +385,221 @@ decreased by ~Mod-.~.
 by ~Mod-H~.
 
 ~delta~ is how much ~ratio~ increases or decreases when presing ~Mod-L~ or ~Mod-H~.
+
+* Manage Hook
+
+#+BEGIN_SRC haskell :tangle export.hs
+myManageHook = (composeAll
+    [ className =? "MPlayer"        --> doFloat
+    , className =? "Gimp"           --> doFloat
+    , className =? "Gpick"          --> doFloat
+    , resource  =? "desktop_window" --> doIgnore
+    , resource  =? "kdesktop"       --> doIgnore ])
+#+END_SRC
+
+This is a part of the default XMonad config. It turns the windows with the class name of ~MPlayer~, ~Gimp~ and ~Gpick~ in floating by default.
+
+* Event Hook
+
+#+BEGIN_SRC haskell :tangle export.hs
+myEventHook = mempty
+#+END_SRC
+
+My event hook is empty.
+
+* Startup Hook
+
+#+BEGIN_SRC haskell :tangle export.hs
+myStartupHook = do
+  spawn "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
+  spawn "setxkbmap br"
+  spawn "xsetroot -cursor_name left_ptr"
+  spawn "xset s off"
+  spawn "xset s 0 0"
+  spawn "xset -dpms"
+  spawn "emacs --daemon"
+  spawn "dunst"
+  spawn "stalonetray"
+#+END_SRC
+
+The programs that will be opened when XMonad starts or is reloaded.
+
+** XRandr
+
+#+BEGIN_SRC haskell
+  spawn "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
+#+END_SRC
+
+This is my monitor setup, if you use a single monitor, remove this line.
+
+** Keyboard Layout
+
+#+BEGIN_SRC haskell
+  spawn "setxkbmap br"
+#+END_SRC
+
+This sets the keyboard layout to the brazilian default. If you use the english qwert keyboard, you can remove this line,
+otherwise, find the right command for setting the keyboard for your layout.
+
+** Where is my cursor?
+
+#+BEGIN_SRC haskell
+  spawn "xsetroot -cursor_name left_ptr"
+#+END_SRC
+
+This fixes a "problem": by default you cursor will only appear when you open a window and when you hover the desktop or the bar,
+you cursor will probally be a X.
+
+This sets the cursor to the Left Pointer.
+
+** I don't want my screen to sleep!
+
+#+BEGIN_SRC haskell
+  spawn "xset s off"
+  spawn "xset s 0 0"
+  spawn "xset -dpms"
+#+END_SRC
+
+This is better explained in [[https://unix.stackexchange.com/a/615439/437678][this amazing answer in Unix Exchange]]. Basically, it turns off screen sleeping, if you want
+your screen to sleep, feel free to remove this.
+
+** Emacs daemon and client
+
+#+BEGIN_SRC haskell
+  spawn "emacs --daemon"
+#+END_SRC
+
+Emacs takes so long to open, because of this, I like to run a Emacs server in background and connect to it with ~emacsclient -c~.
+
+** Notification, please!
+
+#+BEGIN_SRC haskell
+  spawn "dunst"
+#+END_SRC
+
+Dunst is a Notification server, it shows the notifications, and to do that, it needs to run in the background. If you use
+a distribution that comes with a notification server running by default, feel free to remove this. [[https://wiki.archlinux.org/index.php/Desktop_notifications][More information about the topic.]]
+
+** I want a tray!
+
+#+BEGIN_SRC haskell
+  spawn "stalonetray"
+#+END_SRC
+
+This is a tray, I need to run the tray in order to it to work. [[https://wiki.archlinux.org/index.php/Stalonetray][More information about the topic.]]
+
+* PP
+
+#+BEGIN_SRC haskell :tangle export.hs
+myPP = def { ppCurrent         = xmobarColor "#8fbcbb" "" . wrap "<" ">"
+           , ppTitle           = xmobarColor "#8fbcbb" "" . shorten 32
+           , ppHiddenNoWindows = xmobarColor "#4c566a" ""
+           , ppHidden          = id
+           , ppUrgent          = xmobarColor "red" "yellow"
+           , ppWsSep           = ""
+           , ppSep             = " - " }
+#+END_SRC
+
+That's my PP configuration. The PP is the "template" for XMobar output. [[https://hackage.haskell.org/package/xmonad-contrib-0.16/docs/XMonad-Hooks-DynamicLog.html][More information about the topic.]]
+
+* The main, the core function
+
+#+BEGIN_SRC haskell :tangle export.hs
+main = do
+  xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc --dock"
+  xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc --dock"
+
+  xmonad $ docks def {
+    terminal           = terminalEm,
+    focusFollowsMouse  = False,
+    clickJustFocuses   = False,
+    borderWidth        = 1,
+    modMask            = mod4Mask,
+    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    normalBorderColor  = "#555555",
+    focusedBorderColor = "#AAAAAA",
+
+    keys               = myKeys,
+    mouseBindings      = myMouseBindings,
+
+    layoutHook         = myLayout,
+    manageHook         = myManageHook,
+    handleEventHook    = myEventHook,
+    logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
+    startupHook        = myStartupHook }
+#+END_SRC
+
+In any Haskell program, the ~main~ function is were the code starts.
+
+<<xmobar-pipes>>
+** XMobar Pipes
+
+#+BEGIN_SRC haskell
+  xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc --dock"
+  xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc --dock"
+#+END_SRC
+
+This creates two variables, spawning two XMobars, one for each monitor. If you use a single monitor setup, I would recommend you doing:
+
+#+BEGIN_SRC haskell
+  xmproc0 <- spawnPipe "xmobar /home/arthur/.config/xmobar/xmobarrc --dock"
+#+END_SRC
+
+And in the log hook, change
+
+#+BEGIN_SRC haskell
+   logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
+#+END_SRC
+
+to
+
+#+BEGIN_SRC haskell
+   logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x },
+#+END_SRC
+
+By the way, remember to put you home instead of mine.
+
+** Definitions
+
+#+BEGIN_SRC haskell
+  xmonad $ docks def {
+    terminal           = terminalEm,
+    focusFollowsMouse  = False,
+    clickJustFocuses   = False,
+    borderWidth        = 1,
+    modMask            = mod4Mask,
+    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+    normalBorderColor  = "#555555",
+    focusedBorderColor = "#AAAAAA",
+#+END_SRC
+
+Here we define some options to our XMonad, their names are white as intuitive, so I will not explain.
+
+** Keybindings
+
+#+BEGIN_SRC haskell
+    keys               = myKeys,
+    mouseBindings      = myMouseBindings,
+#+END_SRC
+
+Here we just copy the keybindings that we defined soon.
+
+** Hooks
+
+#+BEGIN_SRC haskell
+    layoutHook         = myLayout,
+    manageHook         = myManageHook,
+    handleEventHook    = myEventHook,
+    ...
+    startupHook        = myStartupHook }
+#+END_SRC
+
+We just copy the hooks.
+
+** The Log Hook
+
+    #+BEGIN_SRC haskell
+    logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
+    #+END_SRC haskell
+
+    The log hook is what puts our data in XMobar (or other bar). If you use a single monitor setup, then follow [[xmobar-pipes][XMobar Pipes.]]
