@@ -171,14 +171,14 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((shiftMask           , 0x1008FF11), lowerVolume 1 >> getVolume >>= alert)
     , ((shiftMask           , 0x1008FF13), raiseVolume 1 >> getVolume >>= alert)
  -- , ((0                   , 0x1008FF12), toggleMute >> return ())
-    , ((modm                , xK_F7     ), toggleMute >> return ()
+    , ((modm                , xK_F7     ), toggleMute >> return ())
 
     , ((modm .|. shiftMask  , xK_c      ), kill)
 
     , ((modm                , xK_space  ), sendMessage NextLayout)
     , ((modm .|. shiftMask  , xK_space  ), setLayout $ XMonad.layoutHook conf)
-    , ((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
-        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))
+    , ((modm                , xK_f      ), runSelectedAction defaultGSConfig $
+        map (\x -> (x, sendMessage $ JumpToLayout x)) layoutNames)
 
     , ((modm                , xK_n      ), withFocused minimizeWindow)
     , ((modm .|. shiftMask  , xK_n      ), withLastMinimized maximizeWindowAndFocus)
@@ -203,9 +203,6 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm                , xK_comma  ), sendMessage (IncMasterN 1))
     , ((modm                , xK_period ), sendMessage (IncMasterN (-1)))
 
-    , ((modm                , xK_f      ), runSelectedAction defaultGSConfig $
-        map (\x -> (x, sendMessage $ JumpToLayout x)) layoutNames)
-
     , ((modm .|. shiftMask
              .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
 
@@ -216,21 +213,24 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
     , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
     , ((modm                , xK_i      ), decScreenSpacing 5)
     , ((modm .|. shiftMask  , xK_i      ), decWindowSpacing 5)
-
     , ((modm                , xK_o      ), setScreenSpacing (Border  0  0  0  0))
     , ((modm .|. shiftMask  , xK_o      ), setWindowSpacing (Border 10 10 10 10))
 
     , ((modm                , xK_b      ), withFocused toggleBorder)
 
-
     , ((modm .|. shiftMask  , xK_slash  ),
         spawn ("echo \"" ++ help ++ "\" > ~/.xmonad/help.txt && " ++ textEditor ++ " ~/.xmonad/help.txt"))
     ]
+
     ++
 
     [((m .|. modm, k), windows $ f i)
         | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
         , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
+    ++
+    [((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
+        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))]
+
     ++
 
     [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
@@ -292,7 +292,7 @@ That's the part of the code where all the keyboard keybindings are defined.
     , ((shiftMask           , 0x1008FF11), lowerVolume 1 >> getVolume >>= alert)
     , ((shiftMask           , 0x1008FF13), raiseVolume 1 >> getVolume >>= alert)
  -- , ((0                   , 0x1008FF12), toggleMute >> return ())
-    , ((modm                , xK_F7     ), toggleMute >> return ()
+    , ((modm                , xK_F7     ), toggleMute >> return ())
 #+END_SRC
 
 - ~Mod-F6~ or multimedia key: decrease volume
@@ -318,13 +318,13 @@ When pressing ~Mod-Shift-C~, it will close the focused window.
 #+BEGIN_SRC haskell
     , ((modm                , xK_space  ), sendMessage NextLayout)
     , ((modm .|. shiftMask  , xK_space  ), setLayout $ XMonad.layoutHook conf)
-    , ((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
-        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))
+    , ((modm                , xK_f      ), runSelectedAction defaultGSConfig $
+        map (\x -> (x, sendMessage $ JumpToLayout x)) layoutNames)
 #+END_SRC
 
 - ~Mod-SPC~ changes to the next layout.
 - ~Mod-Shift-SPC~ switches to the first layout.
-- ~Mod-Shift-L~ opens a grid menu for selecting the layout.
+- ~Mod-F~ opens a grid menu for selecting the layout.
 
 ** Minimize windows
 
@@ -381,6 +381,109 @@ Open a grid for selecting a window to focus. The window can be in any workspace!
 - ~Mod-L~ Expand the master pane.
 - ~Mod-Shift-H~ Shrink the selected window.
 - ~Mod-Shift-L~ Expand the selected window.
+
+** Back to tiling
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_t      ), withFocused $ windows . W.sink)
+#+END_SRC
+
+When pressing ~Mod-T~, the window goes back to the tiling mode.
+
+** The master pane is not just one window
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_comma  ), sendMessage (IncMasterN 1))
+    , ((modm                , xK_period ), sendMessage (IncMasterN (-1)))
+#+END_SRC
+
+The master pane can have more than one window, ~Mod-,~ increases the amount of
+windows in the master pane and ~Mod-.~ decreases.
+
+** I want to log out!
+
+#+BEGIN_SRC haskell
+    , ((modm .|. shiftMask
+             .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
+#+END_SRC
+
+When pressing ~Mod-Ctrl-Shift-Q~ the XMonad will exit.
+
+** Recompile and restart
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_q      ), spawn
+        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+#+END_SRC
+
+Pressing ~Mod-Q~ will recompile and restart XMonad.
+
+** Constant gaps are boring, I want to change it!
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_u      ), incScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
+    , ((modm                , xK_i      ), decScreenSpacing 5)
+    , ((modm .|. shiftMask  , xK_i      ), decWindowSpacing 5)
+    , ((modm                , xK_o      ), setScreenSpacing (Border  0  0  0  0))
+    , ((modm .|. shiftMask  , xK_o      ), setWindowSpacing (Border 10 10 10 10))
+#+END_SRC
+
+- ~Mod-U~ will increase the gap in the border of the screen.
+- ~Mod-I~ will decrease the gap in the border of the screen.
+- ~Mod-Shift-U~ will increase the gap between the windows.
+- ~Mod-Shift-I~ will decrease the gap between the windows.
+- ~Mod-O~ will reset the gap in the border of the screen.
+- ~Mod-Shift-O~ will reset the gap between the windows.
+
+** Toggle the border of the focused window
+
+#+BEGIN_SRC haskell
+    , ((modm                , xK_b      ), withFocused toggleBorder)
+#+END_SRC
+
+Pressing ~Mod-B~ will toggle the border of the focused window.
+
+** Help message
+
+#+BEGIN_SRC haskell
+    , ((modm .|. shiftMask  , xK_slash  ),
+        spawn ("echo \"" ++ help ++ "\" > ~/.xmonad/help.txt && " ++ textEditor ++ " ~/.xmonad/help.txt"))
+#+END_SRC
+
+Pressing ~Mod-Shift-/~ will open the help (the help variable is declared later in the code) message in the default text editor.
+
+** Workspaces
+
+#+BEGIN_SRC haskell
+    [((m .|. modm, k), windows $ f i)
+        | (i, k) <- zip (XMonad.workspaces conf) [xK_1 .. xK_9]
+        , (f, m) <- [(W.greedyView, 0), (W.shift, shiftMask)]]
+    ++
+    [((modm .|. shiftMask  , xK_l      ), runSelectedAction defaultGSConfig $
+        map (\x -> (show x, windows $ W.greedyView x)) (XMonad.workspaces conf))]
+#+END_SRC
+
+- Pressing ~Mod-(1-9)~ will switch to that workspace.
+- Pressing ~Mod-Shift-L~ will open a grid menu to select the workspace.
+
+** Monitors
+
+#+BEGIN_SRC haskell
+    [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
+        | (key, sc) <- [(xK_e, 0), (xK_w, 1)]
+        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+#+END_SRC
+
+Pressing ~Mod-W~ and ~Mod-E~ will switch between the monitors, if you have three monitors then do
+
+#+BEGIN_SRC haskell
+    [((m .|. modm, key), screenWorkspace sc >>= flip whenJust (windows . f))
+        | (key, sc) <- [(xK_e, 0), (xK_w, 1), (xK_r, 2)]
+        , (f, m) <- [(W.view, 0), (W.shift, shiftMask)]]
+#+END_SRC
+
+and so on. The number that is with the key is the number of the screen that it switches to.
 
 * Mouse Bindings
 
@@ -852,7 +955,7 @@ We just copy the hooks.
 
 * The help
 
-#+BEGIN_SRC haskell
+#+BEGIN_SRC haskell :tangle export.hs
 help :: String
 help = unlines
     [ "Arthur Bacci's XMonad Config"
