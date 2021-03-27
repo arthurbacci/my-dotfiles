@@ -1,4 +1,4 @@
-#+TITLE: README
+#+TITLE: My XMonad Configuration
 #+AUTHOR: Arthur Bacci
 
 * Dependencies
@@ -48,6 +48,7 @@ import XMonad.Layout.ThreeColumns
 import XMonad.Layout.Column
 import XMonad.Layout.Grid
 import XMonad.Actions.NoBorders
+import XMonad.Util.SpawnOnce
 #+END_SRC
 
 These are the imports, take a look at /Hackage/ to know what each one does.
@@ -56,7 +57,8 @@ These are the imports, take a look at /Hackage/ to know what each one does.
 
 #+BEGIN_SRC haskell :tangle export.hs
 alert = dzenConfig cfg1 . show . round
-cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
+cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"]
+   >=> addArgs ["-bg", "#282a36"] >=> addArgs ["-geometry", "200x100+540+462"]
 #+END_SRC
 
 This is the setup of ~dzen~, it is used to display the volume when pressing the button to change the volume,
@@ -68,6 +70,7 @@ Of course you can change ~-fg~ and ~-bg~ options to the color of your preference
 
 #+BEGIN_SRC haskell
 cfg1 = addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
+   >=> addArgs ["-bg", "#282a36"] >=> addArgs ["-geometry", "200x100+540+462"]
 #+END_SRC
 
 <<program-spawner>>
@@ -207,7 +210,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
              .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
 
     , ((modm                , xK_q      ), spawn
-        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+        "xmonad --recompile; killall xmobar; killall dunst; killall stalonetray; xmonad --restart")
 
     , ((modm                , xK_u      ), incScreenSpacing 5)
     , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
@@ -413,7 +416,7 @@ When pressing ~Mod-Ctrl-Shift-Q~ the XMonad will exit.
 
 #+BEGIN_SRC haskell
     , ((modm                , xK_q      ), spawn
-        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+        "xmonad --recompile; xmonad --restart")
 #+END_SRC
 
 Pressing ~Mod-Q~ will recompile and restart XMonad.
@@ -760,15 +763,14 @@ My event hook is empty.
 
 #+BEGIN_SRC haskell :tangle export.hs
 myStartupHook = do
-  spawn "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
-  spawn "setxkbmap br"
-  spawn "xsetroot -cursor_name left_ptr"
-  spawn "xset s off"
-  spawn "xset s 0 0"
-  spawn "xset -dpms"
-  spawn "emacs --daemon"
-  spawn "dunst"
-  spawn "stalonetray"
+  spawnOnce "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
+  spawnOnce "setxkbmap br"
+  spawnOnce "xsetroot -cursor_name left_ptr"
+  spawnOnce "xset s off"
+  spawnOnce "xset s 0 0"
+  spawnOnce "xset -dpms"
+  spawnOnce "dunst"
+  spawnOnce "stalonetray"
 #+END_SRC
 
 The programs that will be opened when XMonad starts or is reloaded.
@@ -812,14 +814,6 @@ This sets the cursor to the Left Pointer.
 This is better explained in [[https://unix.stackexchange.com/a/615439/437678][this amazing answer in Unix Exchange]]. Basically, it turns off screen sleeping, if you want
 your screen to sleep, feel free to remove this.
 
-** Emacs daemon and client
-
-#+BEGIN_SRC haskell
-  spawn "emacs --daemon"
-#+END_SRC
-
-Emacs takes so long to open, because of this, I like to run a Emacs server in background and connect to it with ~emacsclient -c~.
-
 ** Notification, please!
 
 #+BEGIN_SRC haskell
@@ -846,7 +840,7 @@ myPP = def { ppCurrent         = xmobarColor "#8fbcbb" "" . wrap "<" ">"
            , ppHidden          = id
            , ppUrgent          = xmobarColor "red" "yellow"
            , ppWsSep           = ""
-           , ppSep             = " - " }
+           , ppSep             = " <icon=separator.xpm/> " }
 #+END_SRC
 
 That's my PP configuration. The PP is the "template" for XMobar output. [[https://hackage.haskell.org/package/xmonad-contrib-0.16/docs/XMonad-Hooks-DynamicLog.html][More information about the topic.]]
@@ -858,24 +852,25 @@ main = do
   xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc --dock"
   xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc --dock"
 
-  xmonad $ docks def {
-    terminal           = terminalEm,
-    focusFollowsMouse  = False,
-    clickJustFocuses   = False,
-    borderWidth        = 1,
-    modMask            = mod4Mask,
-    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    normalBorderColor  = "#555555",
-    focusedBorderColor = "#AAAAAA",
+  xmonad $ docks def
+    { terminal           = terminalEm
+    , focusFollowsMouse  = False
+    , clickJustFocuses   = False
+    , borderWidth        = 1
+    , modMask            = mod4Mask
+    , workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    , normalBorderColor  = "#555555"
+    , focusedBorderColor = "#AAAAAA"
 
-    keys               = myKeys,
-    mouseBindings      = myMouseBindings,
+    , keys               = myKeys
+    , mouseBindings      = myMouseBindings
 
-    layoutHook         = myLayout,
-    manageHook         = myManageHook,
-    handleEventHook    = myEventHook,
-    logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
-    startupHook        = myStartupHook }
+    , layoutHook         = myLayout
+    , manageHook         = myManageHook
+    , handleEventHook    = myEventHook
+    , logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x }
+    , startupHook        = myStartupHook
+    }
 #+END_SRC
 
 In any Haskell program, the ~main~ function is were the code starts.
@@ -897,13 +892,13 @@ This creates two variables, spawning two XMobars, one for each monitor. If you u
 And in the log hook, change
 
 #+BEGIN_SRC haskell
-   logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
+   , logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x }
 #+END_SRC
 
 to
 
 #+BEGIN_SRC haskell
-   logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x },
+   , logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x }
 #+END_SRC
 
 By the way, remember to put you home instead of mine.
@@ -911,15 +906,15 @@ By the way, remember to put you home instead of mine.
 ** Definitions
 
 #+BEGIN_SRC haskell
-  xmonad $ docks def {
-    terminal           = terminalEm,
-    focusFollowsMouse  = False,
-    clickJustFocuses   = False,
-    borderWidth        = 1,
-    modMask            = mod4Mask,
-    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    normalBorderColor  = "#555555",
-    focusedBorderColor = "#AAAAAA",
+  xmonad $ docks def
+    { terminal           = terminalEm
+    , focusFollowsMouse  = False
+    , clickJustFocuses   = False
+    , borderWidth        = 1
+    , modMask            = mod4Mask
+    , workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    , normalBorderColor  = "#555555"
+    , focusedBorderColor = "#AAAAAA"
 #+END_SRC
 
 Here we define some options to our XMonad, their names are white as intuitive, so I will not explain.
@@ -927,8 +922,8 @@ Here we define some options to our XMonad, their names are white as intuitive, s
 ** Keybindings
 
 #+BEGIN_SRC haskell
-    keys               = myKeys,
-    mouseBindings      = myMouseBindings,
+    , keys               = myKeys
+    , mouseBindings      = myMouseBindings
 #+END_SRC
 
 Here we just copy the keybindings that we defined soon.
@@ -936,11 +931,12 @@ Here we just copy the keybindings that we defined soon.
 ** Hooks
 
 #+BEGIN_SRC haskell
-    layoutHook         = myLayout,
-    manageHook         = myManageHook,
-    handleEventHook    = myEventHook,
+    , layoutHook         = myLayout
+    , manageHook         = myManageHook
+    , handleEventHook    = myEventHook
     ...
-    startupHook        = myStartupHook }
+    , startupHook        = myStartupHook
+    }
 #+END_SRC
 
 We just copy the hooks.
@@ -948,8 +944,8 @@ We just copy the hooks.
 ** The log hook
 
     #+BEGIN_SRC haskell
-    logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
-    #+END_SRC haskell
+    , logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x }
+    #+END_SRC
 
     The log hook is what puts our data in XMobar (or other bar). If you use a single monitor setup, then follow [[xmobar-pipes][XMobar Pipes.]]
 

@@ -25,9 +25,11 @@ import XMonad.Layout.ThreeColumns
 import XMonad.Layout.Column
 import XMonad.Layout.Grid
 import XMonad.Actions.NoBorders
+import XMonad.Util.SpawnOnce
 
 alert = dzenConfig cfg1 . show . round
-cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"] >=> addArgs ["-bg", "#282a36"]
+cfg1 = addArgs ["-xs", "1"] >=> addArgs ["-fg", "#eceff4"]
+   >=> addArgs ["-bg", "#282a36"] >=> addArgs ["-geometry", "200x100+540+462"]
 
 spawnSelectedName :: GSConfig String -> [(String, String)] -> X ()
 spawnSelectedName conf lst = gridselect conf lst >>= flip whenJust spawn
@@ -135,7 +137,7 @@ myKeys conf@(XConfig {XMonad.modMask = modm}) = M.fromList $
              .|. controlMask, xK_q      ), io (exitWith ExitSuccess))
 
     , ((modm                , xK_q      ), spawn
-        "xmonad --recompile; killall xmobar; killall emacs; killall dunst; killall stalonetray; xmonad --restart")
+        "xmonad --recompile; killall xmobar; killall dunst; killall stalonetray; xmonad --restart")
 
     , ((modm                , xK_u      ), incScreenSpacing 5)
     , ((modm .|. shiftMask  , xK_u      ), incWindowSpacing 5)
@@ -232,15 +234,14 @@ myManageHook = (composeAll
 myEventHook = mempty
 
 myStartupHook = do
-  spawn "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
-  spawn "setxkbmap br"
-  spawn "xsetroot -cursor_name left_ptr"
-  spawn "xset s off"
-  spawn "xset s 0 0"
-  spawn "xset -dpms"
-  spawn "emacs --daemon"
-  spawn "dunst"
-  spawn "stalonetray"
+  spawnOnce "xrandr --output HDMI1 --primary --mode 1280x1024 --rate 60 --pos 1400x0 --output VGA1 --mode 1280x1024 --rate 60 && nitrogen --restore"
+  spawnOnce "setxkbmap br"
+  spawnOnce "xsetroot -cursor_name left_ptr"
+  spawnOnce "xset s off"
+  spawnOnce "xset s 0 0"
+  spawnOnce "xset -dpms"
+  spawnOnce "dunst"
+  spawnOnce "stalonetray"
 
 myPP = def { ppCurrent         = xmobarColor "#8fbcbb" "" . wrap "<" ">"
            , ppTitle           = xmobarColor "#8fbcbb" "" . shorten 32
@@ -248,30 +249,31 @@ myPP = def { ppCurrent         = xmobarColor "#8fbcbb" "" . wrap "<" ">"
            , ppHidden          = id
            , ppUrgent          = xmobarColor "red" "yellow"
            , ppWsSep           = ""
-           , ppSep             = " - " }
+           , ppSep             = " <icon=separator.xpm/> " }
 
 main = do
   xmproc0 <- spawnPipe "xmobar -x 0 /home/arthur/.config/xmobar/xmobarrc --dock"
   xmproc1 <- spawnPipe "xmobar -x 1 /home/arthur/.config/xmobar/xmobarrc --dock"
 
-  xmonad $ docks def {
-    terminal           = terminalEm,
-    focusFollowsMouse  = False,
-    clickJustFocuses   = False,
-    borderWidth        = 1,
-    modMask            = mod4Mask,
-    workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
-    normalBorderColor  = "#555555",
-    focusedBorderColor = "#AAAAAA",
+  xmonad $ docks def
+    { terminal           = terminalEm
+    , focusFollowsMouse  = False
+    , clickJustFocuses   = False
+    , borderWidth        = 1
+    , modMask            = mod4Mask
+    , workspaces         = ["1", "2", "3", "4", "5", "6", "7", "8", "9"]
+    , normalBorderColor  = "#555555"
+    , focusedBorderColor = "#AAAAAA"
 
-    keys               = myKeys,
-    mouseBindings      = myMouseBindings,
+    , keys               = myKeys
+    , mouseBindings      = myMouseBindings
 
-    layoutHook         = myLayout,
-    manageHook         = myManageHook,
-    handleEventHook    = myEventHook,
-    logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x },
-    startupHook        = myStartupHook }
+    , layoutHook         = myLayout
+    , manageHook         = myManageHook
+    , handleEventHook    = myEventHook
+    , logHook            = dynamicLogWithPP $ myPP { ppOutput = \x -> hPutStrLn xmproc0 x >> hPutStrLn xmproc1 x }
+    , startupHook        = myStartupHook
+    }
 
 help :: String
 help = unlines
