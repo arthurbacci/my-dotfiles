@@ -1,0 +1,18 @@
+#/bin/bash
+
+cd ~
+
+export MOZ_ENABLE_WAYLAND="1"
+export XDG_CURRENT_DESKTOP=sway
+export XDG_SESSION_TYPE=wayland
+export QT_QPA_PLATFORM="wayland-egl"
+export _JAVA_AWT_WM_NONREPARENTING=1
+export XCURSOR_SIZE=24
+
+# export $(dbus-launch)
+
+export PATH=$PATH:/home/arthur/.local/bin
+
+exec sway
+
+
