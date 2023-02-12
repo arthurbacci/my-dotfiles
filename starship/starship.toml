@@ -1,13 +1,18 @@
-# ~/.config/starship.toml
-
-# Don't print a new line at the start of the prompt
 add_newline = false
 
-# Replace the "❯" symbol in the prompt with "λ"
-[character]
-success_symbol = "[λ](bold yellow)"
-error_symbol   = "[θ](bold red)"
+format = '''$username@$hostname $directory
+$character'''
 
-# Disable the package module, hiding it from the prompt completely
-[package]
-disabled = true
+[character]
+success_symbol = '[λ](green)'
+error_symbol   = '[ə](red)'
+
+[username]
+format = "[$user](red)"
+disabled = false
+show_always = true
+
+[hostname]
+format = "[$hostname$ssh_symbol](white)"
+disabled = false
+ssh_only = false
