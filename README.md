@@ -1,5 +1,8 @@
 # my-dotfiles
 
+![image](https://user-images.githubusercontent.com/59983362/218318829-8447b3bf-1b50-4771-8ca7-7aa56b5e44ee.png)
+
+
 Where I store dotfiles of my programs
 
 ## Requirements
